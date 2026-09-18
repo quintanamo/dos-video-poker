@@ -321,7 +321,7 @@ void draw_pay_table(int bet) {
 void draw_status(int credits, int bet) {
     char value_text[7];
 
-    draw_rect(0, 185, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1, COLOR_LIGHT_GRAY);
+    draw_rect(0, 185, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1, COLOR_BLUE);
     draw_text(5, 190, "CREDITS:", COLOR_YELLOW);
     sprintf(value_text, "%d", credits);
     draw_text(59, 190, value_text, COLOR_YELLOW);
@@ -331,7 +331,7 @@ void draw_status(int credits, int bet) {
 }
 
 void clear_play_area(void) {
-    draw_rect(0, 44, SCREEN_WIDTH - 1, 184, COLOR_BLUE);
+    draw_rect(0, 44, SCREEN_WIDTH - 1, 184, COLOR_LIGHT_BLUE);
 }
 
 void draw_instructions(void) {
@@ -349,7 +349,7 @@ void draw_hand_label(int hand_type) {
 
     name = hand_name(hand_type);
     x = (SCREEN_WIDTH - (int)strlen(name) * 6) / 2;
-    draw_text(x, 52, name, COLOR_YELLOW);
+    draw_text(x, 52, name, COLOR_WHITE);
 }
 
 void draw_hand(Card *hand, int *held, int visible, int hand_type) {
@@ -361,9 +361,33 @@ void draw_hand(Card *hand, int *held, int visible, int hand_type) {
     }
     for (i = 0; i < visible; i++) {
         if (held[i]) {
-            draw_text(15 + i * 60 + 13, 84, "HOLD", COLOR_YELLOW);
+            draw_text(15 + i * 60 + 13, 84, "HOLD", COLOR_WHITE);
         }
         draw_card(&hand[i], 15 + i * 60, CARD_Y);
+    }
+}
+
+void count_payout(int *credits, int payout, int bet) {
+    int remaining;
+    int key;
+
+    remaining = payout;
+    while (remaining > 0) {
+        if (kbhit()) {
+            key = read_key();
+            if (key == ' ') {
+                *credits += remaining;
+                draw_status(*credits, bet);
+                update_region(0, 185, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
+                return;
+            }
+        }
+
+        (*credits)++;
+        remaining--;
+        draw_status(*credits, bet);
+        update_region(0, 185, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
+        delay(100);
     }
 }
 
@@ -577,7 +601,6 @@ int main(void) {
                 }
                 hand_type = evaluate_hand(hand);
                 payout = payout_for_hand(hand_type, bet);
-                credits += payout;
                 if (hand_type == HAND_NO_WIN || credits == 0) {
                     draw_hand(hand, held, CARD_COUNT, HAND_GAME_OVER);
                 } else {
@@ -585,6 +608,9 @@ int main(void) {
                 }
                 draw_status(credits, bet);
                 update_region(0, 0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
+                if (payout > 0) {
+                    count_payout(&credits, payout, bet);
+                }
                 state = STATE_RESULT;
             }
         }
